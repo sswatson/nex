@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How much work is that?</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --track: #e4e3df;
+    --s1: #2a78d6; /* O(1) */
+    --s2: #008300; /* O(log n) */
+    --s3: #e87ba4; /* O(n) */
+    --s4: #eda100; /* O(n²) */
+    --s5: #1baf7a; /* O(n log n) */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --track: #33353f;
+      --s1: #3987e5;
+      --s2: #008300;
+      --s3: #d55181;
+      --s4: #c98500;
+      --s5: #199e70;
+    }
+  }
+  body {
+    margin: 10px 14px;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: transparent;
+    font-size: 14px;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    margin-bottom: 1em;
+  }
+  .controls label { color: var(--ink-2); }
+  input[type="range"] { flex: 1; accent-color: var(--s1); }
+  .n { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 6.5em; }
+  .row {
+    display: grid;
+    grid-template-columns: 6.5em 1fr;
+    align-items: center;
+    gap: 0.6em;
+    margin: 0.45em 0;
+  }
+  .row .name { color: var(--ink-2); text-align: right; }
+  .bar-track { position: relative; height: 18px; }
+  .bar {
+    height: 14px;
+    margin-top: 2px;
+    border-radius: 0 4px 4px 0;
+    min-width: 3px;
+    transition: width 80ms linear;
+  }
+  .value {
+    position: absolute;
+    top: 0;
+    line-height: 18px;
+    padding-left: 6px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .note { color: var(--ink-2); font-size: 0.86em; margin-top: 0.9em; }
+</style>
+</head>
+<body>
+  <div class="controls">
+    <label for="n">input size</label>
+    <input id="n" type="range" min="1" max="6" step="0.05" value="2" aria-label="input size n">
+    <span class="n" id="nOut"></span>
+  </div>
+  <div id="rows"></div>
+  <p class="note">Bar length is logarithmic — each equal step means another zero on the count.</p>
+  <script>
+    const CLASSES = [
+      { name: 'O(1)',       color: 'var(--s1)', ops: () => 1 },
+      { name: 'O(log n)',   color: 'var(--s2)', ops: (n) => Math.max(1, Math.log2(n)) },
+      { name: 'O(n)',       color: 'var(--s3)', ops: (n) => n },
+      { name: 'O(n log n)', color: 'var(--s5)', ops: (n) => n * Math.max(1, Math.log2(n)) },
+      { name: 'O(n²)',      color: 'var(--s4)', ops: (n) => n * n }
+    ];
+    const MAX_LOG = 12; // n² at n = 10^6
+
+    function fmt(x) {
+      if (x < 1000) return String(Math.round(x));
+      const units = ['K', 'M', 'B', 'T'];
+      let u = -1;
+      while (x >= 1000 && u < units.length - 1) { x /= 1000; u += 1; }
+      return (x >= 100 ? Math.round(x) : x.toFixed(1)) + ' ' + units[u];
+    }
+
+    const rows = document.getElementById('rows');
+    const bars = CLASSES.map((c) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<span class="name">' + c.name + '</span>' +
+        '<div class="bar-track"><div class="bar" style="background:' + c.color + '"></div>' +
+        '<span class="value"></span></div>';
+      rows.appendChild(row);
+      return { bar: row.querySelector('.bar'), value: row.querySelector('.value') };
+    });
+
+    const slider = document.getElementById('n');
+    const nOut = document.getElementById('nOut');
+    function update() {
+      const n = Math.round(Math.pow(10, Number(slider.value)));
+      nOut.textContent = 'n = ' + fmt(n);
+      for (const [i, c] of CLASSES.entries()) {
+        const ops = c.ops(n);
+        const frac = Math.max(0.015, Math.log10(Math.max(ops, 1)) / MAX_LOG);
+        bars[i].bar.style.width = (frac * 100).toFixed(1) + '%';
+        bars[i].value.style.left = (frac * 100).toFixed(1) + '%';
+        bars[i].value.textContent = fmt(ops) + ' ops';
+      }
+    }
+    slider.addEventListener('input', update);
+    update();
+  </script>
+</body>
+</html>
