@@ -17,6 +17,11 @@ function describeQuestion(q: Question): string {
 			`Exercise folder: ${q.folder} — the app copies it to a workspace and opens it in the student's own editor; they work there and press Continue when done. You cannot see their files; help from the exercise description and what they tell you.`
 		);
 		if (q.context) lines.push(`Guidance for helping with this exercise: ${q.context}`);
+	} else if (q.type === 'terminal') {
+		lines.push(
+			`Terminal target: ${q.target}. The learner may send this text to their configured terminal target, then inspect the result:\n${q.text}`
+		);
+		if (q.context) lines.push(`Guidance for helping with this terminal step: ${q.context}`);
 	} else if (q.context) {
 		lines.push(`Discussion guidance for the tutor: ${q.context}`);
 	}

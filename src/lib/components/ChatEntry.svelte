@@ -22,20 +22,33 @@
 		entry.questionId !== undefined ? session.mcAnswers[entry.questionId] : undefined
 	);
 
+	$effect(() => {
+		if (question?.type === 'terminal') session.prewarmTerminal(question.id);
+	});
+
 	function typeLabel(t: string): string {
 		if (t === 'multiple-choice') return 'Question';
 		if (t === 'free-response') return 'Your answer, in the chat box below';
 		if (t === 'exercise') return 'Hands-on exercise — opens in your editor';
+		if (t === 'terminal') return 'Hands-on step — sends text to your terminal';
 		return 'Open question — share your thoughts below';
 	}
 
 	let launchState = $state<'idle' | 'opening' | 'opened'>('idle');
+	let injectionState = $state<'idle' | 'sending' | 'sent'>('idle');
 
 	async function launchExercise(): Promise<void> {
 		if (!question || launchState === 'opening') return;
 		launchState = 'opening';
 		const ok = await session.launchExercise(question.id);
 		launchState = ok ? 'opened' : 'idle';
+	}
+
+	async function injectTerminal(): Promise<void> {
+		if (!question || injectionState === 'sending') return;
+		injectionState = 'sending';
+		const ok = await session.injectTerminal(question.id);
+		injectionState = ok ? 'sent' : 'idle';
 	}
 </script>
 
@@ -71,6 +84,24 @@
 				</button>
 				{#if launchState === 'opened'}
 					<span class="launch-note">Opened — press Continue here when you're done.</span>
+				{/if}
+			</div>
+		{/if}
+
+		{#if entry.variant === 'question' && question?.type === 'terminal'}
+			{#if question.showText}
+				<pre class="terminal-code"><code>{question.text}</code></pre>
+			{/if}
+			<div class="exercise-actions">
+				<button class="launch" disabled={injectionState === 'sending'} onclick={injectTerminal}>
+					{injectionState === 'sending'
+						? 'Sending…'
+						: injectionState === 'sent'
+							? 'Send again'
+							: `Send to ${question.target}`}
+				</button>
+				{#if injectionState === 'sent'}
+					<span class="launch-note">Sent — inspect the result, then press Continue here.</span>
 				{/if}
 			</div>
 		{/if}
@@ -185,6 +216,10 @@
 	.launch-note {
 		font-size: 0.85em;
 		color: var(--muted);
+	}
+	.terminal-code {
+		margin: 0.7rem 0 0;
+		white-space: pre-wrap;
 	}
 
 	.chips {

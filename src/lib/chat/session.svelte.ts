@@ -39,6 +39,7 @@ export class LessonSession {
 
 	#nextId = 1;
 	#initialized = false;
+	#prewarmedTerminalSteps = new Set<string>();
 
 	constructor(lesson: Lesson) {
 		this.lesson = lesson;
@@ -285,6 +286,42 @@ export class LessonSession {
 			this.#push({ role: 'tutor', markdown: (e as Error).message, variant: 'error' });
 			return false;
 		}
+	}
+
+	/** Send a terminal lesson step through its configured target. */
+	async injectTerminal(questionId: string): Promise<boolean> {
+		try {
+			const res = await fetch('/api/terminal', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ slug: this.lesson.slug, questionId })
+			});
+			if (!res.ok) {
+				throw new Error(((await res.json()) as { error?: string }).error ?? `HTTP ${res.status}`);
+			}
+			return true;
+		} catch (e) {
+			this.#push({ role: 'tutor', markdown: (e as Error).message, variant: 'error' });
+			return false;
+		}
+	}
+
+	/** Resolve a terminal target in the background before the learner clicks Send. */
+	prewarmTerminal(questionId: string): void {
+		if (this.#prewarmedTerminalSteps.has(questionId)) return;
+		this.#prewarmedTerminalSteps.add(questionId);
+		void (async () => {
+			try {
+				const res = await fetch('/api/terminal/prewarm', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ slug: this.lesson.slug, questionId })
+				});
+				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			} catch {
+				this.#prewarmedTerminalSteps.delete(questionId);
+			}
+		})();
 	}
 
 	/**

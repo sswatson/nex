@@ -41,11 +41,31 @@ export interface ExerciseQuestion {
 	context?: string;
 }
 
+/**
+ * A lesson step that can type text into a user-configured terminal target.
+ * The target is a named entry in ~/.config/nex/config.yaml; the lesson never
+ * contains a shell command or a pane id itself.
+ */
+export interface TerminalQuestion {
+	type: 'terminal';
+	id: string;
+	prompt: string;
+	/** Name of a configured terminal target, such as "matlab". */
+	target: string;
+	/** Text to write verbatim to that target. */
+	text: string;
+	/** Whether to show the text in the chat before offering to send it. */
+	showText: boolean;
+	/** Optional guidance for the tutor when the learner asks about this step. */
+	context?: string;
+}
+
 export type Question =
 	| MultipleChoiceQuestion
 	| FreeResponseQuestion
 	| OpenEndedQuestion
-	| ExerciseQuestion;
+	| ExerciseQuestion
+	| TerminalQuestion;
 
 export type LessonItem =
 	| { kind: 'exposition'; markdown: string }

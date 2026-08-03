@@ -70,7 +70,7 @@ A question block is YAML inside a ` ```question ` fence. All types share:
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `type` | yes | `multiple-choice`, `free-response`, `open-ended`, or `exercise` |
+| `type` | yes | `multiple-choice`, `free-response`, `open-ended`, `exercise`, or `terminal` |
 | `prompt` | yes | The question text (Markdown + math) |
 | `id` | no | Stable identifier; defaults to `q1`, `q2`, ... in document order. Must be unique. |
 
@@ -147,6 +147,29 @@ context: >
 - Give exercises an explicit, stable `id` — it names the learner's workspace directory.
 - Make the folder self-sufficient: a short `README.md` with the task, starter files, and a self-checking test script the learner can run (`python3 test_x.py`, `cargo test`, ...). The app does not validate completion.
 - The tutor cannot see the learner's files — write `context` so it can help from the description alone.
+
+### `terminal`
+
+A terminal step offers a **Send to _target_** button that injects lesson text through a command configured by the learner. It is useful for a tutorial that should run a small MATLAB, Python, or shell command while leaving the learner free to inspect the live REPL. The learner explicitly presses the button; Nex never sends the text merely because they advance through the lesson.
+
+```yaml
+type: terminal
+id: plot-sine
+prompt: Send this to MATLAB, then inspect the plot before continuing.
+target: matlab
+text: |
+  x = linspace(0, 2*pi, 200);
+  plot(x, sin(x)); grid on
+context: >
+  Help the learner read the axes and relate the sample count to the curve's
+  smoothness.
+```
+
+- `target` (required): a simple name (`letters`, `numbers`, `_`, and `-`) matching an entry in `terminal.targets` in `~/.config/nex/config.yaml`. This lets each learner map `matlab` to their own Zellij, tmux, or other terminal command.
+- `text` (required): the exact non-empty text to inject. Use a YAML block scalar for multi-line code.
+- `show_text` (optional, default `true`): show the exact snippet in the chat above the Send button. Set this to `false` only when a large or sensitive payload would make the lesson harder to read.
+- A Zellij target should identify its visible `tab` and `pane` names, which Nex resolves immediately before sending; it refuses to guess if there is no unique live match. A custom command receives the safely shell-quoted text in its `{text}` placeholder. Set `zellij.enter: false` if the learner should edit the text before running it.
+- `context` (optional): guidance for the tutor when the learner asks about this step.
 
 ## Off-script behavior (for context)
 

@@ -34,7 +34,7 @@ pnpm dev
 To launch lesson libraries from anywhere, install the `nex` command globally (Volta shims it):
 
 ```sh
-pnpm run install:global   # = pnpm build && npm install -g .
+just install   # = pnpm build && npm install -g .
 ```
 
 ```sh
@@ -46,7 +46,7 @@ nex --no-open      # don't open the browser
 
 Library resolution, first match wins: `<dir>/.nex/lessons` (the convention for lessons that live inside the project they're about — keep `.nex/` in your global gitignore), `<dir>/lessons`, `<dir>` itself.
 
-The server binds to localhost only. Re-run `install:global` after pulling changes — the global command is a built artifact, not live source. Per-user state (history, exercise workspaces, config) is machine-global and shared across lesson libraries; **history is keyed by lesson slug alone**, so keep slugs unique across your libraries.
+The server binds to localhost only. Re-run `just install` after pulling changes — the global command is a built artifact, not live source. Per-user state (history, exercise workspaces, config) is machine-global and shared across lesson libraries; **history is keyed by lesson slug alone**, so keep slugs unique across your libraries.
 
 Open http://localhost:5173. By default the LLM backend is the **Claude Code CLI**, run headlessly with its own subscription login — if `claude` is installed and logged in (`/login`), no further setup is needed and usage is billed to the subscription rather than API token pricing. Each lesson gets a persistent CLI session, so repeated turns skip startup cost and keep conversational context server-side.
 
@@ -74,6 +74,23 @@ exercise:
 ```
 
 Any command works — `code {dir}`, `alacritty --working-directory {dir} &`, `tmux new-window -c {dir}`, ... On first launch the exercise's template folder is copied to `~/.local/share/nex/workspaces/<lesson>/<exercise-id>`, so your progress survives relaunches and the template stays pristine.
+
+### Terminal lesson steps (`~/.config/nex/config.yaml`)
+
+Lessons can also offer a button that types a lesson-authored snippet into a named terminal target. The lesson selects a target by name; your local configuration owns the command and pane identifier, so lesson files never need to know about your multiplexer layout.
+
+```yaml
+terminal:
+  targets:
+    # `target: matlab` in a lesson resolves this live pane by its visible
+    # Zellij tab and pane titles; numeric pane IDs can change between sessions.
+    matlab:
+      zellij:
+        tab: matlab
+        pane: matlab
+```
+
+Nex resolves a Zellij target by visible names once, then caches its live pane ID so later sends are immediate. A send failure clears that cache; the next attempt resolves the names again. It refuses to send if the named pane is absent or ambiguous. Set `enter: false` under `zellij` when the learner should edit the text before running it. A target can alternatively be any shell command, including `tmux send-keys` or a custom resolver; it must contain `{text}`, which Nex safely shell-quotes. Sending is deliberate: the learner presses the button for each step, can inspect the terminal result, and then continues the lesson.
 
 ## Writing lessons
 

@@ -43,6 +43,18 @@ const questionSchema = z.discriminatedUnion('type', [
 				message: 'must not contain ".." or empty path segments'
 			}),
 		context: z.string().optional()
+	}),
+	z.object({
+		type: z.literal('terminal'),
+		id: z.string().optional(),
+		prompt: z.string().min(1),
+		target: z
+			.string()
+			.min(1)
+			.regex(/^[A-Za-z0-9_-]+$/, 'must contain only letters, numbers, hyphens, or underscores'),
+		text: z.string().min(1),
+		show_text: z.boolean().optional().default(true),
+		context: z.string().optional()
 	})
 ]);
 
@@ -120,6 +132,17 @@ function parseQuestionBlock(yamlText: string, index: number): Question {
 	}
 	if (q.type === 'exercise') {
 		return { type: 'exercise', id, prompt: q.prompt, folder: q.folder, context: q.context };
+	}
+	if (q.type === 'terminal') {
+		return {
+			type: 'terminal',
+			id,
+			prompt: q.prompt,
+			target: q.target,
+			text: q.text,
+			showText: q.show_text,
+			context: q.context
+		};
 	}
 	return { type: 'open-ended', id, prompt: q.prompt, context: q.context };
 }

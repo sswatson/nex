@@ -8,17 +8,39 @@
 	const session = $derived.by(() => new LessonSession(data.lesson));
 
 	let scroller = $state<HTMLElement | null>(null);
+	// Whether the view is close enough to the bottom to keep following new content.
+	let pinned = $state(true);
+
+	// Treat "within a couple of lines of the bottom" as pinned, so subpixel
+	// rounding and small overshoots don't unstick the follow behaviour.
+	const PIN_SLACK = 48;
+
+	function atBottom(el: HTMLElement) {
+		return el.scrollHeight - el.scrollTop - el.clientHeight <= PIN_SLACK;
+	}
+
+	function onScroll() {
+		if (scroller) {
+			pinned = atBottom(scroller);
+		}
+	}
+
+	function scrollToBottom() {
+		scroller?.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+		pinned = true;
+	}
 
 	$effect(() => {
 		session.init();
 	});
 
-	// Keep the newest message in view as entries arrive and stream in.
+	// Follow the newest message as it streams, but only while the reader has
+	// stayed at the bottom. Scrolling up hands control back to them.
 	$effect(() => {
 		const last = session.entries.at(-1);
 		void last?.markdown;
 		void session.entries.length;
-		if (scroller) {
+		if (scroller && pinned) {
 			scroller.scrollTo({ top: scroller.scrollHeight });
 		}
 	});
@@ -54,7 +76,7 @@
 		</button>
 	</header>
 
-	<main bind:this={scroller}>
+	<main bind:this={scroller} onscroll={onScroll}>
 		<div class="transcript">
 			{#each session.entries as entry (entry.id)}
 				<ChatEntry {entry} {session} />
@@ -63,7 +85,10 @@
 	</main>
 
 	<footer>
-		<Composer {session} />
+		{#if !pinned}
+			<button class="jump" onclick={scrollToBottom} aria-label="Scroll to newest">↓</button>
+		{/if}
+		<Composer {session} onsend={scrollToBottom} />
 	</footer>
 </div>
 
@@ -136,7 +161,29 @@
 		padding: 1.25rem 1.1rem 0.5rem;
 	}
 	footer {
+		position: relative;
 		padding: 0.6rem 1.1rem 1rem;
+	}
+	.jump {
+		position: absolute;
+		top: -3.2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 2.4rem;
+		height: 2.4rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--bubble-tutor);
+		color: var(--muted);
+		font: inherit;
+		font-size: 1.1rem;
+		line-height: 1;
+		cursor: pointer;
+		box-shadow: 0 4px 14px -6px rgb(0 0 0 / 0.45);
+	}
+	.jump:hover {
+		color: var(--accent);
+		border-color: var(--accent);
 	}
 	footer :global(.composer) {
 		max-width: 52rem;

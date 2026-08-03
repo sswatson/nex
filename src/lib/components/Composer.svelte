@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { LessonSession } from '$lib/chat/session.svelte';
 
-	let { session }: { session: LessonSession } = $props();
+	// onsend fires whenever the user drives the conversation forward, so the
+	// host can re-follow the bottom of the transcript.
+	let { session, onsend }: { session: LessonSession; onsend?: () => void } = $props();
 
 	let text = $state('');
 	let textarea = $state<HTMLTextAreaElement | null>(null);
@@ -23,6 +25,7 @@
 	function send() {
 		const value = text;
 		text = '';
+		onsend?.();
 		if (value.trim()) {
 			void session.submit(value);
 		} else if (!session.finished) {
@@ -56,7 +59,10 @@
 				class:primary={!session.pending}
 				class:subtle={!!session.pending}
 				disabled={session.busy}
-				onclick={() => session.advance()}
+				onclick={() => {
+					onsend?.();
+					session.advance();
+				}}
 			>
 				{continueLabel}
 			</button>

@@ -220,3 +220,52 @@ context: Guidance here.`),
 		expect(() => parseLesson(wrap(`type: exercise\nprompt: P`), 'x')).toThrow(/invalid/i);
 	});
 });
+
+describe('terminal questions', () => {
+	const wrap = (yaml: string) => `---
+title: Terminal
+---
+\`\`\`question
+${yaml}
+\`\`\`
+`;
+
+	it('parses a named terminal target and text', () => {
+		const lesson = parseLesson(
+			wrap(`type: terminal
+id: matlab-step
+prompt: Plot the signal.
+target: matlab
+text: disp(1 + 1)`),
+			'x'
+		);
+		const item = lesson.items.find((i) => i.kind === 'question');
+		expect(item?.kind === 'question' && item.question).toMatchObject({
+			type: 'terminal',
+			id: 'matlab-step',
+			target: 'matlab',
+			text: 'disp(1 + 1)',
+			showText: true
+		});
+	});
+
+	it('can hide a terminal snippet from the chat', () => {
+		const lesson = parseLesson(
+			wrap('type: terminal\nprompt: P\ntarget: matlab\ntext: x\nshow_text: false'),
+			'x'
+		);
+		const item = lesson.items.find((i) => i.kind === 'question');
+		expect(item?.kind === 'question' && item.question.type === 'terminal' && item.question.showText).toBe(
+			false
+		);
+	});
+
+	it('requires a safe named target and non-empty text', () => {
+		expect(() =>
+			parseLesson(wrap('type: terminal\nprompt: P\ntarget: matlab pane\ntext: x'), 'x')
+		).toThrow(/target/);
+		expect(() => parseLesson(wrap('type: terminal\nprompt: P\ntarget: matlab\ntext: ""'), 'x')).toThrow(
+			/invalid/i
+		);
+	});
+});
