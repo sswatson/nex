@@ -141,6 +141,11 @@
 		line-height: 1.55;
 		overflow-wrap: break-word;
 	}
+	/* A shrink-to-fit bubble makes an embed's width: 100% circular (it falls
+	   back to ~300px), so a bubble holding one takes its full width. */
+	.bubble:has(:global(iframe.embed)) {
+		width: min(46rem, 88%);
+	}
 	.entry.tutor .bubble {
 		background: var(--bubble-tutor);
 		border: 1px solid var(--border);
