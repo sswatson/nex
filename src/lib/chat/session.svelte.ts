@@ -26,6 +26,15 @@ interface SavedState {
 	nextId: number;
 }
 
+/**
+ * Whether a question holds the lesson until the learner answers (or skips) it.
+ * Exercises and terminal steps don't: the learner works in their editor or REPL
+ * and presses Continue when done.
+ */
+function awaitsAnswer(question: Question): boolean {
+	return question.type !== 'exercise' && question.type !== 'terminal';
+}
+
 const COMPLETION_MESSAGE = "🎉 That's the end of the lesson — nice work! Feel free to keep asking questions about anything we covered.";
 
 export class LessonSession {
@@ -105,9 +114,7 @@ export class LessonSession {
 					variant: 'question',
 					questionId: item.question.id
 				});
-				// Exercises don't await a typed answer — the learner works in
-				// their editor and presses Continue when done.
-				if (item.question.type !== 'exercise') {
+				if (awaitsAnswer(item.question)) {
 					this.pending = item.question;
 				}
 			}
@@ -376,7 +383,9 @@ export class LessonSession {
 		if (state.v !== 1 || !Array.isArray(state.entries)) return false;
 		this.entries = state.entries;
 		this.cursor = Math.min(state.cursor, this.total);
-		this.pending = state.pendingId ? (this.questionById(state.pendingId) ?? null) : null;
+		const restored = state.pendingId ? (this.questionById(state.pendingId) ?? null) : null;
+		// Runs saved before terminal steps stopped being pending may still name one.
+		this.pending = restored && awaitsAnswer(restored) ? restored : null;
 		this.mcAnswers = state.mcAnswers ?? {};
 		this.#nextId = state.nextId ?? this.entries.length + 1;
 		return this.entries.length > 0;
